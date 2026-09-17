@@ -1,32 +1,32 @@
 --[========================================================]
---     Death Ball Script (Xeno Optimized + Native GUI)
---     Управление меню: клавиша RightShift (Правый Shift)
+--     Death Ball | Fixed & Optimized for Xeno
+--     Управление меню: клавиша INSERT
 --[========================================================]
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
-local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- Удаляем старое меню, если оно было запущено
-if CoreGui:FindFirstChild("DeathBallXenoGUI") then
-    CoreGui.DeathBallXenoGUI:Destroy()
+-- Удаляем старое меню, если оно уже открыто
+if PlayerGui:FindFirstChild("DeathBallXenoGUI") then
+    PlayerGui.DeathBallXenoGUI:Destroy()
 end
 
--- Настройки скрипта по умолчанию
+-- Конфигурация
 getgenv().DBConfig = {
     AutoParry = false,
     ParryDistance = 16,
     SkinChanger = false
 }
 
--- Создание графического интерфейса (GUI)
+-- Создание графического интерфейса
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "DeathBallXenoGUI"
-ScreenGui.Parent = CoreGui
+ScreenGui.Parent = PlayerGui
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
@@ -35,7 +35,7 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.Position = UDim2.new(0.35, 0, 0.3, 0)
 MainFrame.Size = UDim2.new(0, 320, 0, 310)
 MainFrame.Active = true
-MainFrame.Draggable = true -- Меню можно перетаскивать мышкой
+MainFrame.Draggable = true
 
 local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0, 8)
@@ -54,7 +54,7 @@ local TitleCorner = Instance.new("UICorner")
 TitleCorner.CornerRadius = UDim.new(0, 8)
 TitleCorner.Parent = Title
 
--- Функция создания переключателей (Toggle)
+-- Функция создания переключателей
 local function CreateToggle(name, yPos, callback)
     local btn = Instance.new("TextButton")
     btn.Parent = MainFrame
@@ -84,7 +84,7 @@ local function CreateToggle(name, yPos, callback)
     end)
 end
 
--- Функция создания поля ввода текста (для дистанции)
+-- Функция создания полей ввода настроек
 local function CreateTextBox(name, yPos, defaultVal, callback)
     local label = Instance.new("TextLabel")
     label.Parent = MainFrame
@@ -121,7 +121,7 @@ local function CreateTextBox(name, yPos, defaultVal, callback)
     end)
 end
 
--- Добавление элементов в меню
+-- Добавление элементов интерфейса
 CreateToggle("Auto Parry", 55, function(state)
     getgenv().DBConfig.AutoParry = state
 end)
@@ -130,11 +130,10 @@ CreateTextBox("Parry Distance", 105, 16, function(val)
     getgenv().DBConfig.ParryDistance = val
 end)
 
-CreateToggle("Skin Changer (All Unlocks)", 155, function(state)
+CreateToggle("Skin Changer (AllUnlocks)", 155, function(state)
     getgenv().DBConfig.SkinChanger = state
 end)
 
--- Подсказка управления
 local InfoLabel = Instance.new("TextLabel")
 InfoLabel.Parent = MainFrame
 InfoLabel.BackgroundTransparency = 1
@@ -143,20 +142,20 @@ InfoLabel.Size = UDim2.new(0.9, 0, 0, 35)
 InfoLabel.Font = Enum.Font.Gotham
 InfoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 InfoLabel.TextSize = 12
-InfoLabel.Text = "Скрыть/Показать меню: правый Shift"
+InfoLabel.Text = "Скрыть/Показать меню: клавиша INSERT"
 
--- Кнопка скрыть/показать по клавише RightShift
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if input.KeyCode == Enum.KeyCode.RightShift then
+-- Изменено на INSERT, так как Shift занят игрой
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.Insert then
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
 
--- Логика поиска мяча
+-- Исправленный поиск мяча (без синтаксических ошибок)
 local function FindBall()
     for _, obj in ipairs(workspace:GetChildren()) do
         if obj:IsA("BasePart") and (obj.Name:lower():find("ball") or obj:FindFirstChild("Trail")) then
-            if obj.AssemblyLinearVelocity.Magnitude > 5 then
+            if obj.AssemblyLinearVelocity.Magnitude > 3 then
                 return obj
             end
         end
@@ -169,7 +168,7 @@ local function FindBall()
     return nil
 end
 
--- Цикл авто-парирования
+-- Логика Авто-парирования
 RunService.RenderStepped:Connect(function()
     if not getgenv().DBConfig.AutoParry then return end
     
@@ -183,15 +182,16 @@ RunService.RenderStepped:Connect(function()
         local distance = (rootPart.Position - ball.Position).Magnitude
         
         if distance <= getgenv().DBConfig.ParryDistance then
-            VirtualUser:Button1Down(Vector2.new(0,0))
-            task.wait(0.02)
-            VirtualUser:Button1Up(Vector2.new(0,0))
-            task.wait(0.18)
+            local tool = character:FindFirstChildOfClass("Tool")
+            if tool then
+                tool:Activate()
+            end
+            task.wait(0.15)
         end
     end
 end)
 
--- Логика скин-ченджера (клиентская визуализация мечей и аур)
+-- Скин-ченджер (визуальное отображение)
 task.spawn(function()
     while task.wait(1) do
         if getgenv().DBConfig.SkinChanger then
@@ -200,8 +200,7 @@ task.spawn(function()
                 if character then
                     local tool = character:FindFirstChildOfClass("Tool") or (LocalPlayer.Backpack and LocalPlayer.Backpack:FindFirstChildOfClass("Tool"))
                     if tool and tool:FindFirstChild("Handle") then
-                        -- Применяем светящийся цвет к мечу для проверки работы визуального мода
-                        tool.Handle.Color = Color3.fromRGB(0, 255, 255)
+                        tool.Handle.Color = Color3.fromRGB(255, 0, 128)
                     end
                 end
             end)
@@ -209,4 +208,4 @@ task.spawn(function()
     end
 end)
 
-print("[-] Меню Death Ball успешно загружено для Xeno!")
+print("[-] Меню Death Ball успешно загружено! Нажми INSERT для скрытия/показа.")
